@@ -23,10 +23,10 @@
     "eject": "react-scripts eject",
     "lint": "run-s lint:*",
     "lint:eslint": "eslint .",
-    "lint:prettier": "prettier --check '*.js' 'src/**/*.ts'",
+    "lint:prettier": "prettier --check '*.js' 'src/**/*.{ts,tsx}'",
     "lint-fix": "run-p lint-fix:*",
     "lint-fix:eslint": "eslint . --fix",
-    "lint-fix:prettier": "prettier --write '*.js' 'src/**/*.ts'"
+    "lint-fix:prettier": "prettier --write '*.js' 'src/**/*.{ts,tsx}'"
   },
   "eslintConfig": {
     "extends": [
