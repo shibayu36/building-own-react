@@ -16,8 +16,8 @@ process.on('unhandledRejection', err => {
 require('../config/env');
 
 
-const jest = require('jest');
 const execSync = require('child_process').execSync;
+const jest = require('jest');
 let argv = process.argv.slice(2);
 
 function isInGitRepository() {

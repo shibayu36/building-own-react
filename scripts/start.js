@@ -16,23 +16,24 @@ require('../config/env');
 
 
 const fs = require('fs');
-const chalk = require('react-dev-utils/chalk');
-const webpack = require('webpack');
-const WebpackDevServer = require('webpack-dev-server');
-const clearConsole = require('react-dev-utils/clearConsole');
-const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
 const {
   choosePort,
   createCompiler,
   prepareProxy,
   prepareUrls,
 } = require('react-dev-utils/WebpackDevServerUtils');
+const { checkBrowsers } = require('react-dev-utils/browsersHelper');
+const chalk = require('react-dev-utils/chalk');
+const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
+const clearConsole = require('react-dev-utils/clearConsole');
 const openBrowser = require('react-dev-utils/openBrowser');
 const semver = require('semver');
+const webpack = require('webpack');
+const WebpackDevServer = require('webpack-dev-server');
+const getClientEnvironment = require('../config/env');
 const paths = require('../config/paths');
 const configFactory = require('../config/webpack.config');
 const createDevServerConfig = require('../config/webpackDevServer.config');
-const getClientEnvironment = require('../config/env');
 const react = require(require.resolve('react', { paths: [paths.appPath] }));
 
 const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
@@ -67,7 +68,6 @@ if (process.env.HOST) {
 
 // We require that you explicitly set browsers and do not fall back to
 // browserslist defaults.
-const { checkBrowsers } = require('react-dev-utils/browsersHelper');
 checkBrowsers(paths.appPath, isInteractive)
   .then(() => {
     // We attempt to use the default port but if it is busy, we offer the user to
