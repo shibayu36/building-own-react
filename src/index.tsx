@@ -3,6 +3,7 @@ const Didact = {
   createElement,
 };
 
+// ここ独自実装に差し替えられるの面白い
 /** @jsx Didact.createElement */
 const element = (
   <div id="foo">
