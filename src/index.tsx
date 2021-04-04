@@ -4,7 +4,17 @@ const Didact = {
   render,
 };
 
-let nextUnitOfWork: any = null;
+type Fiber = {
+  type: string;
+  props: DidactProps | null;
+
+  dom?: HTMLElement | Text;
+
+  parent?: Fiber;
+  sibling?: Fiber;
+  child?: Fiber;
+};
+let nextUnitOfWork: Fiber | undefined = undefined;
 
 // ここ独自実装に差し替えられるの面白い
 /** @jsx Didact.createElement */
@@ -28,55 +38,51 @@ function workLoop(deadline: IdleDeadline): void {
   requestIdleCallback(workLoop);
 }
 
-function performUnitOfWork(fiber: any): any {
-  console.log(fiber.type);
-
+function performUnitOfWork(fiber: Fiber): Fiber | undefined {
   // add dom node
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
   }
 
-  if (fiber.parent) {
+  if (fiber.parent?.dom !== undefined) {
     fiber.parent.dom.appendChild(fiber.dom);
   }
 
   // create new fibers
-  const elements = fiber.props.children;
-  let index = 0;
-  let prevSibling = null;
+  const elements = fiber.props?.children ?? [];
+  let prevSibling: Fiber | undefined = undefined;
 
-  while (index < elements.length) {
-    const element = elements[index];
-
-    const newFiber = {
+  for (const element of elements) {
+    const newFiber: Fiber = {
       type: element.type,
       props: element.props,
       parent: fiber,
-      dom: null,
-      sibling: null as any,
+      dom: undefined,
+      sibling: undefined,
     };
 
-    if (index === 0) {
+    if (prevSibling === undefined) {
+      // first child element
       fiber.child = newFiber;
     } else {
-      prevSibling!.sibling = newFiber;
+      prevSibling.sibling = newFiber;
     }
 
     prevSibling = newFiber;
-    index++;
   }
 
   // return next unit of work
   if (fiber.child) {
     return fiber.child;
   }
-  let nextFiber = fiber;
+  let nextFiber: Fiber | undefined = fiber;
   while (nextFiber) {
     if (nextFiber.sibling) {
       return nextFiber.sibling;
     }
     nextFiber = nextFiber.parent;
   }
+  return undefined;
 }
 
 function createElement(type: string, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
@@ -114,26 +120,12 @@ function render(element: DidactElement, container: HTMLElement | null): void {
   if (container === null) return;
 
   nextUnitOfWork = {
+    type: "ROOT_ELEMENT",
     dom: container,
     props: {
       children: [element],
     },
   };
-
-  // if (element.type === "TEXT_ELEMENT") {
-  //   const dom = document.createTextNode(element.props?.nodeValue ?? "");
-  //   container.appendChild(dom);
-  // } else {
-  //   const dom = document.createElement(element.type);
-  //   if (element.props !== null) {
-  //     for (const [key, value] of Object.entries(element.props)) {
-  //       if (!isAttribute(key)) continue;
-  //       dom.setAttribute(key, value);
-  //     }
-  //     element.props.children.forEach((child) => render(child, dom));
-  //   }
-  //   container.appendChild(dom);
-  // }
 }
 
 function createDom(fiber: DidactElement): Text | HTMLElement {
