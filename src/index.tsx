@@ -15,6 +15,22 @@ const element = (
 const container = document.getElementById("root");
 Didact.render(element, container);
 
+requestIdleCallback(workLoop);
+
+let nextUnitOfWork: any = null;
+function workLoop(deadline: IdleDeadline): void {
+  let shouldYield = false;
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+    shouldYield = deadline.timeRemaining() < 1;
+  }
+  requestIdleCallback(workLoop);
+}
+
+function performUnitOfWork(nextUnitOfWork: any): any {
+  // TODO
+}
+
 function createElement(type: string, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
   return {
     type,
