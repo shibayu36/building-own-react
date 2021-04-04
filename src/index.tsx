@@ -81,6 +81,21 @@ function render(element: DidactElement, container: HTMLElement | null): void {
   }
 }
 
+function createDom(fiber: DidactElement): Text | HTMLElement {
+  if (element.type === "TEXT_ELEMENT") {
+    return document.createTextNode(element.props?.nodeValue ?? "");
+  } else {
+    const dom = document.createElement(element.type);
+    if (element.props !== null) {
+      for (const [key, value] of Object.entries(element.props)) {
+        if (!isAttribute(key)) continue;
+        dom.setAttribute(key, value);
+      }
+    }
+    return dom;
+  }
+}
+
 function isAttribute(propName: string): boolean {
   // jsxをtransformするときに__selfや__sourceを入れてくるので抜いている
   return propName !== "children" && propName !== "__self" && propName !== "__source";
