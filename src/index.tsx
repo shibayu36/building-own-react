@@ -18,6 +18,7 @@ Didact.render(element, container);
 requestIdleCallback(workLoop);
 
 let nextUnitOfWork: any = null;
+
 function workLoop(deadline: IdleDeadline): void {
   let shouldYield = false;
   while (nextUnitOfWork && !shouldYield) {
@@ -65,20 +66,27 @@ type DidactProps = {
 function render(element: DidactElement, container: HTMLElement | null): void {
   if (container === null) return;
 
-  if (element.type === "TEXT_ELEMENT") {
-    const dom = document.createTextNode(element.props?.nodeValue ?? "");
-    container.appendChild(dom);
-  } else {
-    const dom = document.createElement(element.type);
-    if (element.props !== null) {
-      for (const [key, value] of Object.entries(element.props)) {
-        if (!isAttribute(key)) continue;
-        dom.setAttribute(key, value);
-      }
-      element.props.children.forEach((child) => render(child, dom));
-    }
-    container.appendChild(dom);
-  }
+  nextUnitOfWork = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+  };
+
+  // if (element.type === "TEXT_ELEMENT") {
+  //   const dom = document.createTextNode(element.props?.nodeValue ?? "");
+  //   container.appendChild(dom);
+  // } else {
+  //   const dom = document.createElement(element.type);
+  //   if (element.props !== null) {
+  //     for (const [key, value] of Object.entries(element.props)) {
+  //       if (!isAttribute(key)) continue;
+  //       dom.setAttribute(key, value);
+  //     }
+  //     element.props.children.forEach((child) => render(child, dom));
+  //   }
+  //   container.appendChild(dom);
+  // }
 }
 
 function createDom(fiber: DidactElement): Text | HTMLElement {
