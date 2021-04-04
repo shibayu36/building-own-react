@@ -14,6 +14,7 @@ type Fiber = {
   sibling?: Fiber;
   child?: Fiber;
 };
+let wipRoot: Fiber | undefined = undefined;
 let nextUnitOfWork: Fiber | undefined = undefined;
 
 // ここ独自実装に差し替えられるの面白い
@@ -35,6 +36,11 @@ function workLoop(deadline: IdleDeadline): void {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
     shouldYield = deadline.timeRemaining() < 1;
   }
+
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot();
+  }
+
   requestIdleCallback(workLoop);
 }
 
@@ -42,10 +48,6 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
   // add dom node
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
-  }
-
-  if (fiber.parent?.dom !== undefined) {
-    fiber.parent.dom.appendChild(fiber.dom);
   }
 
   // create new fibers
@@ -85,6 +87,27 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
   return undefined;
 }
 
+/**
+ * 仮想DOMを反映
+ */
+function commitRoot(): void {
+  commitWork(wipRoot?.child);
+  wipRoot = undefined;
+}
+
+function commitWork(fiber: Fiber | undefined): void {
+  if (fiber?.dom === undefined) {
+    return;
+  }
+
+  const domParent = fiber.parent?.dom;
+  if (domParent !== undefined) {
+    domParent.appendChild(fiber.dom);
+    commitWork(fiber.child);
+    commitWork(fiber.sibling);
+  }
+}
+
 function createElement(type: string, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
   return {
     type,
@@ -119,13 +142,14 @@ type DidactProps = {
 function render(element: DidactElement, container: HTMLElement | null): void {
   if (container === null) return;
 
-  nextUnitOfWork = {
+  wipRoot = {
     type: "ROOT_ELEMENT",
     dom: container,
     props: {
       children: [element],
     },
   };
+  nextUnitOfWork = wipRoot;
 }
 
 function createDom(fiber: DidactElement): Text | HTMLElement {
