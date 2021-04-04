@@ -4,6 +4,8 @@ const Didact = {
   render,
 };
 
+let nextUnitOfWork: any = null;
+
 // ここ独自実装に差し替えられるの面白い
 /** @jsx Didact.createElement */
 const element = (
@@ -17,8 +19,6 @@ Didact.render(element, container);
 
 requestIdleCallback(workLoop);
 
-let nextUnitOfWork: any = null;
-
 function workLoop(deadline: IdleDeadline): void {
   let shouldYield = false;
   while (nextUnitOfWork && !shouldYield) {
@@ -28,8 +28,55 @@ function workLoop(deadline: IdleDeadline): void {
   requestIdleCallback(workLoop);
 }
 
-function performUnitOfWork(nextUnitOfWork: any): any {
-  // TODO
+function performUnitOfWork(fiber: any): any {
+  console.log(fiber.type);
+
+  // add dom node
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber);
+  }
+
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom);
+  }
+
+  // create new fibers
+  const elements = fiber.props.children;
+  let index = 0;
+  let prevSibling = null;
+
+  while (index < elements.length) {
+    const element = elements[index];
+
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+      sibling: null as any,
+    };
+
+    if (index === 0) {
+      fiber.child = newFiber;
+    } else {
+      prevSibling!.sibling = newFiber;
+    }
+
+    prevSibling = newFiber;
+    index++;
+  }
+
+  // return next unit of work
+  if (fiber.child) {
+    return fiber.child;
+  }
+  let nextFiber = fiber;
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling;
+    }
+    nextFiber = nextFiber.parent;
+  }
 }
 
 function createElement(type: string, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
@@ -90,12 +137,12 @@ function render(element: DidactElement, container: HTMLElement | null): void {
 }
 
 function createDom(fiber: DidactElement): Text | HTMLElement {
-  if (element.type === "TEXT_ELEMENT") {
-    return document.createTextNode(element.props?.nodeValue ?? "");
+  if (fiber.type === "TEXT_ELEMENT") {
+    return document.createTextNode(fiber.props?.nodeValue ?? "");
   } else {
-    const dom = document.createElement(element.type);
-    if (element.props !== null) {
-      for (const [key, value] of Object.entries(element.props)) {
+    const dom = document.createElement(fiber.type);
+    if (fiber.props !== null) {
+      for (const [key, value] of Object.entries(fiber.props)) {
         if (!isAttribute(key)) continue;
         dom.setAttribute(key, value);
       }
