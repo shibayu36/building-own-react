@@ -13,8 +13,12 @@ type Fiber = {
   parent?: Fiber;
   sibling?: Fiber;
   child?: Fiber;
+
+  alternate?: Fiber;
 };
 let wipRoot: Fiber | undefined = undefined;
+// 最後のファイバーツリーの参照。これと比較し差分処理する
+let currentRoot: Fiber | undefined = undefined;
 let nextUnitOfWork: Fiber | undefined = undefined;
 
 // ここ独自実装に差し替えられるの面白い
@@ -52,26 +56,7 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
 
   // create new fibers
   const elements = fiber.props?.children ?? [];
-  let prevSibling: Fiber | undefined = undefined;
-
-  for (const element of elements) {
-    const newFiber: Fiber = {
-      type: element.type,
-      props: element.props,
-      parent: fiber,
-      dom: undefined,
-      sibling: undefined,
-    };
-
-    if (prevSibling === undefined) {
-      // first child element
-      fiber.child = newFiber;
-    } else {
-      prevSibling.sibling = newFiber;
-    }
-
-    prevSibling = newFiber;
-  }
+  reconcileChildren(fiber, elements);
 
   // return next unit of work
   if (fiber.child) {
@@ -87,11 +72,36 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
   return undefined;
 }
 
+// あるfiberの子供のfiberを構築する
+function reconcileChildren(wipFiber: Fiber, elements: DidactElement[]) {
+  let prevSibling: Fiber | undefined = undefined;
+
+  for (const element of elements) {
+    const newFiber: Fiber = {
+      type: element.type,
+      props: element.props,
+      parent: wipFiber,
+      dom: undefined,
+      sibling: undefined,
+    };
+
+    if (prevSibling === undefined) {
+      // first child element
+      wipFiber.child = newFiber;
+    } else {
+      prevSibling.sibling = newFiber;
+    }
+
+    prevSibling = newFiber;
+  }
+}
+
 /**
  * 仮想DOMを反映
  */
 function commitRoot(): void {
   commitWork(wipRoot?.child);
+  currentRoot = wipRoot;
   wipRoot = undefined;
 }
 
@@ -148,6 +158,7 @@ function render(element: DidactElement, container: HTMLElement | null): void {
     props: {
       children: [element],
     },
+    alternate: currentRoot,
   };
   nextUnitOfWork = wipRoot;
 }
