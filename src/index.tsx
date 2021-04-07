@@ -15,6 +15,8 @@ type Fiber = {
   child?: Fiber;
 
   alternate?: Fiber;
+
+  effectTag?: "UPDATE" | "PLACEMENT" | "DELETION";
 };
 let wipRoot: Fiber | undefined = undefined;
 // 最後のファイバーツリーの参照。これと比較し差分処理する
@@ -74,26 +76,49 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
 
 // あるfiberの子供のfiberを構築する
 function reconcileChildren(wipFiber: Fiber, elements: DidactElement[]) {
-  let prevSibling: Fiber | undefined = undefined;
+  const index = 0;
+  let oldFiber = wipFiber.alternate?.child;
+  const prevSibling: Fiber | undefined = undefined;
 
-  for (const element of elements) {
-    const newFiber: Fiber = {
-      type: element.type,
-      props: element.props,
-      parent: wipFiber,
-      dom: undefined,
-      sibling: undefined,
-    };
+  while (index < elements.length || oldFiber !== undefined) {
+    const element = elements[index];
+    const newFiber: Fiber | undefined = undefined;
 
-    if (prevSibling === undefined) {
-      // first child element
-      wipFiber.child = newFiber;
-    } else {
-      prevSibling.sibling = newFiber;
+    // TODO compare oldFiber to element
+    const sameType = oldFiber && element && oldFiber.type === element.type;
+
+    if (sameType) {
+      // TODO ノードの更新
+    }
+    if (element && !sameType) {
+      // TODO ノードの追加
+    }
+    if (oldFiber && !sameType) {
+      // TODO ノードの削除
     }
 
-    prevSibling = newFiber;
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling;
+    }
   }
+  // for (const element of elements) {
+  //   const newFiber: Fiber = {
+  //     type: element.type,
+  //     props: element.props,
+  //     parent: wipFiber,
+  //     dom: undefined,
+  //     sibling: undefined,
+  //   };
+
+  //   if (prevSibling === undefined) {
+  //     // first child element
+  //     wipFiber.child = newFiber;
+  //   } else {
+  //     prevSibling.sibling = newFiber;
+  //   }
+
+  //   prevSibling = newFiber;
+  // }
 }
 
 /**
