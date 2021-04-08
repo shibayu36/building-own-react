@@ -22,6 +22,7 @@ let wipRoot: Fiber | undefined = undefined;
 // 最後のファイバーツリーの参照。これと比較し差分処理する
 let currentRoot: Fiber | undefined = undefined;
 let nextUnitOfWork: Fiber | undefined = undefined;
+let deletions: Fiber[] = [];
 
 // ここ独自実装に差し替えられるの面白い
 /** @jsx Didact.createElement */
@@ -78,47 +79,55 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
 function reconcileChildren(wipFiber: Fiber, elements: DidactElement[]) {
   const index = 0;
   let oldFiber = wipFiber.alternate?.child;
-  const prevSibling: Fiber | undefined = undefined;
+  let prevSibling: Fiber | undefined = undefined;
 
   while (index < elements.length || oldFiber !== undefined) {
     const element = elements[index];
-    const newFiber: Fiber | undefined = undefined;
+    let newFiber: Fiber | undefined = undefined;
 
-    // TODO compare oldFiber to element
     const sameType = oldFiber && element && oldFiber.type === element.type;
 
     if (sameType) {
-      // TODO ノードの更新
+      // ノードの更新
+      newFiber = {
+        type: element.type,
+        props: element.props,
+        dom: oldFiber?.dom,
+        parent: wipFiber,
+        alternate: oldFiber,
+        effectTag: "UPDATE",
+      };
     }
     if (element && !sameType) {
-      // TODO ノードの追加
+      // ノードの追加
+      newFiber = {
+        type: element.type,
+        props: element.props,
+        dom: undefined,
+        parent: wipFiber,
+        alternate: undefined,
+        effectTag: "PLACEMENT",
+      };
     }
     if (oldFiber && !sameType) {
-      // TODO ノードの削除
+      // ノードの削除
+      oldFiber.effectTag = "DELETION";
+      deletions.push(oldFiber);
     }
 
     if (oldFiber) {
       oldFiber = oldFiber.sibling;
     }
+
+    if (prevSibling === undefined) {
+      // first child element
+      wipFiber.child = newFiber;
+    } else {
+      prevSibling.sibling = newFiber;
+    }
+
+    prevSibling = newFiber;
   }
-  // for (const element of elements) {
-  //   const newFiber: Fiber = {
-  //     type: element.type,
-  //     props: element.props,
-  //     parent: wipFiber,
-  //     dom: undefined,
-  //     sibling: undefined,
-  //   };
-
-  //   if (prevSibling === undefined) {
-  //     // first child element
-  //     wipFiber.child = newFiber;
-  //   } else {
-  //     prevSibling.sibling = newFiber;
-  //   }
-
-  //   prevSibling = newFiber;
-  // }
 }
 
 /**
@@ -186,6 +195,7 @@ function render(element: DidactElement, container: HTMLElement | null): void {
     alternate: currentRoot,
   };
   nextUnitOfWork = wipRoot;
+  deletions = [];
 }
 
 function createDom(fiber: DidactElement): Text | HTMLElement {
