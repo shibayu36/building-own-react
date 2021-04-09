@@ -4,6 +4,8 @@ const Didact = {
   render,
 };
 
+const defaultProps: DidactProps = { children: [] };
+
 type Fiber = {
   type: string;
   props: DidactProps | null;
@@ -145,11 +147,22 @@ function commitWork(fiber: Fiber | undefined): void {
   }
 
   const domParent = fiber.parent?.dom;
-  if (domParent !== undefined) {
+  if (domParent === undefined) return;
+
+  if (fiber.effectTag === "PLACEMENT" && fiber.dom !== undefined) {
     domParent.appendChild(fiber.dom);
-    commitWork(fiber.child);
-    commitWork(fiber.sibling);
+  } else if (fiber.effectTag === "UPDATE" && fiber.dom !== undefined) {
+    updateDom(fiber.dom, fiber.alternate?.props ?? defaultProps, fiber.props ?? defaultProps);
+  } else if (fiber.effectTag === "DELETION") {
+    domParent.removeChild(fiber.dom);
   }
+
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
+}
+
+function updateDom(dom: Text | HTMLElement, prevProps: DidactProps, nextProps: DidactProps): void {
+  // TODO
 }
 
 function createElement(type: string, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
