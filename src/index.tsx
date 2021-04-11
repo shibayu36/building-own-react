@@ -161,10 +161,6 @@ function commitWork(fiber: Fiber | undefined): void {
   commitWork(fiber.sibling);
 }
 
-function updateDom(dom: Text | HTMLElement, prevProps: DidactProps, nextProps: DidactProps): void {
-  // TODO
-}
-
 function createElement(type: string, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
   return {
     type,
@@ -218,7 +214,7 @@ function createDom(fiber: DidactElement): Text | HTMLElement {
     const dom = document.createElement(fiber.type);
     if (fiber.props !== null) {
       for (const [key, value] of Object.entries(fiber.props)) {
-        if (!isAttribute(key)) continue;
+        if (!isProperty(key)) continue;
         dom.setAttribute(key, value);
       }
     }
@@ -226,9 +222,39 @@ function createDom(fiber: DidactElement): Text | HTMLElement {
   }
 }
 
-function isAttribute(propName: string): boolean {
+function updateDom(dom: HTMLElement | Text, prevProps: DidactProps, nextProps: DidactProps): void {
+  if (dom instanceof Text) {
+    dom.nodeValue = nextProps.nodeValue;
+  } else {
+    // Remove old properties
+    Object.keys(prevProps)
+      .filter(isProperty)
+      .filter(isGone(prevProps, nextProps))
+      .forEach((name) => {
+        dom.setAttribute(name, "");
+      });
+
+    // Set new or changed properties
+    Object.keys(nextProps)
+      .filter(isProperty)
+      .filter(isNew(prevProps, nextProps))
+      .forEach((name) => {
+        dom.setAttribute(name, nextProps[name]);
+      });
+  }
+}
+
+function isProperty(propName: string): boolean {
   // jsxをtransformするときに__selfや__sourceを入れてくるので抜いている
   return propName !== "children" && propName !== "__self" && propName !== "__source";
+}
+
+function isNew(prevProps: DidactProps, nextProps: DidactProps): (propName: string) => boolean {
+  return (propName) => prevProps[propName] !== nextProps[propName];
+}
+
+function isGone(prevProps: DidactProps, nextProps: DidactProps): (propName: string) => boolean {
+  return (propName) => !(propName in nextProps);
 }
 
 export {};
