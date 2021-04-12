@@ -79,7 +79,7 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
 
 // あるfiberの子供のfiberを構築する
 function reconcileChildren(wipFiber: Fiber, elements: DidactElement[]) {
-  const index = 0;
+  let index = 0;
   let oldFiber = wipFiber.alternate?.child;
   let prevSibling: Fiber | undefined = undefined;
 
@@ -129,6 +129,7 @@ function reconcileChildren(wipFiber: Fiber, elements: DidactElement[]) {
     }
 
     prevSibling = newFiber;
+    index++;
   }
 }
 
@@ -241,12 +242,40 @@ function updateDom(dom: HTMLElement | Text, prevProps: DidactProps, nextProps: D
       .forEach((name) => {
         dom.setAttribute(name, nextProps[name]);
       });
+
+    //Remove old or changed event listeners
+    Object.keys(prevProps)
+      .filter(isEvent)
+      .filter((key) => !(key in nextProps) || isNew(prevProps, nextProps)(key))
+      .forEach((name) => {
+        const eventType = name.toLowerCase().substring(2);
+        dom.removeEventListener(eventType, prevProps[name]);
+      });
+
+    // Add event listeners
+    Object.keys(nextProps)
+      .filter(isEvent)
+      .filter(isNew(prevProps, nextProps))
+      .forEach((name) => {
+        const eventType = name.toLowerCase().substring(2);
+        dom.addEventListener(eventType, nextProps[name]);
+      });
   }
 }
 
 function isProperty(propName: string): boolean {
   // jsxをtransformするときに__selfや__sourceを入れてくるので抜いている
-  return propName !== "children" && propName !== "__self" && propName !== "__source";
+  return (
+    propName !== "children" &&
+    !isEvent(propName) &&
+    // jsxをtransformするときに__selfや__sourceを入れてくるので抜いている
+    propName !== "__self" &&
+    propName !== "__source"
+  );
+}
+
+function isEvent(propName: string): boolean {
+  return propName.startsWith("on");
 }
 
 function isNew(prevProps: DidactProps, nextProps: DidactProps): (propName: string) => boolean {
