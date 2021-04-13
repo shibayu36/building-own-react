@@ -28,12 +28,10 @@ let deletions: Fiber[] = [];
 
 // ここ独自実装に差し替えられるの面白い
 /** @jsx Didact.createElement */
-const element = (
-  <div id="foo">
-    <a>bar</a>
-    <b />
-  </div>
-);
+function App(props: { name: string }): DidactElement {
+  return <h1>Hi {props.name}</h1>;
+}
+const element = <App name="foo" />;
 const container = document.getElementById("root");
 Didact.render(element, container);
 
