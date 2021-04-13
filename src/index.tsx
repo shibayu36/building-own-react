@@ -7,8 +7,9 @@ const Didact = {
 const defaultProps: DidactProps = { children: [] };
 
 type Fiber = {
-  type: string;
+  type: any;
   props: DidactProps | null;
+  key: string | number | null;
 
   dom?: HTMLElement | Text;
 
@@ -92,6 +93,7 @@ function reconcileChildren(wipFiber: Fiber, elements: DidactElement[]) {
       newFiber = {
         type: element.type,
         props: element.props,
+        key: null,
         dom: oldFiber?.dom,
         parent: wipFiber,
         alternate: oldFiber,
@@ -103,6 +105,7 @@ function reconcileChildren(wipFiber: Fiber, elements: DidactElement[]) {
       newFiber = {
         type: element.type,
         props: element.props,
+        key: null,
         dom: undefined,
         parent: wipFiber,
         alternate: undefined,
@@ -160,13 +163,14 @@ function commitWork(fiber: Fiber | undefined): void {
   commitWork(fiber.sibling);
 }
 
-function createElement(type: string, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
+function createElement(type: any, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
   return {
     type,
     props: {
       ...props,
       children: children.map((child) => (typeof child === "object" ? child : createTextElement(child))),
     },
+    key: null,
   };
 }
 
@@ -177,12 +181,14 @@ function createTextElement(text: DidactText): DidactElement {
       nodeValue: text,
       children: [],
     },
+    key: null,
   };
 }
 
 type DidactElement = {
-  type: string;
+  type: any;
   props: DidactProps | null;
+  key: string | number | null;
 };
 type DidactText = string | number;
 type DidactChild = DidactElement | DidactText;
@@ -196,6 +202,7 @@ function render(element: DidactElement, container: HTMLElement | null): void {
 
   wipRoot = {
     type: "ROOT_ELEMENT",
+    key: null,
     dom: container,
     props: {
       children: [element],
