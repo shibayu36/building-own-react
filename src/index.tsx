@@ -53,14 +53,12 @@ function workLoop(deadline: IdleDeadline): void {
 }
 
 function performUnitOfWork(fiber: Fiber): Fiber | undefined {
-  // add dom node
-  if (!fiber.dom) {
-    fiber.dom = createDom(fiber);
+  const isFunctionComponent = fiber.type instanceof Function;
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
   }
-
-  // create new fibers
-  const elements = fiber.props?.children ?? [];
-  reconcileChildren(fiber, elements);
 
   // return next unit of work
   if (fiber.child) {
@@ -74,6 +72,23 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
     nextFiber = nextFiber.parent;
   }
   return undefined;
+}
+
+function updateFunctionComponent(fiber: Fiber): void {
+  // 関数コンポーネントは関数を呼び出した結果がchildren
+  const children = [fiber.type(fiber.props)];
+  reconcileChildren(fiber, children);
+}
+
+function updateHostComponent(fiber: Fiber): void {
+  // add dom node
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber);
+  }
+
+  // create new fibers
+  const elements = fiber.props?.children ?? [];
+  reconcileChildren(fiber, elements);
 }
 
 // あるfiberの子供のfiberを構築する
@@ -144,23 +159,33 @@ function commitRoot(): void {
 }
 
 function commitWork(fiber: Fiber | undefined): void {
-  if (fiber?.dom === undefined) {
-    return;
-  }
+  if (!fiber) return;
 
-  const domParent = fiber.parent?.dom;
-  if (domParent === undefined) return;
+  // DOMノードを持つファイバーが見つかるまでファイバーツリーを上に移動
+  let domParentFiber = fiber.parent;
+  while (domParentFiber?.dom === undefined) {
+    domParentFiber = domParentFiber?.parent;
+  }
+  const domParent = domParentFiber.dom;
 
   if (fiber.effectTag === "PLACEMENT" && fiber.dom !== undefined) {
     domParent.appendChild(fiber.dom);
   } else if (fiber.effectTag === "UPDATE" && fiber.dom !== undefined) {
     updateDom(fiber.dom, fiber.alternate?.props ?? defaultProps, fiber.props ?? defaultProps);
   } else if (fiber.effectTag === "DELETION") {
-    domParent.removeChild(fiber.dom);
+    commitDeletion(fiber, domParent);
   }
 
   commitWork(fiber.child);
   commitWork(fiber.sibling);
+}
+
+function commitDeletion(fiber: Fiber, domParent: HTMLElement | Text) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom);
+  } else {
+    fiber.child && commitDeletion(fiber.child, domParent);
+  }
 }
 
 function createElement(type: any, props: DidactProps = { children: [] }, ...children: DidactChild[]): DidactElement {
