@@ -32,7 +32,19 @@ let deletions: Fiber[] = [];
 function App(props: { name: string }): DidactElement {
   return <h1>Hi {props.name}</h1>;
 }
-const element = <App name="foo" />;
+
+function Counter() {
+  const [state, setState] = Didact.useState(1);
+  return <h1 onClick={() => setState((c) => c + 1)}>Count: {state}</h1>;
+}
+
+const element = (
+  <div>
+    <App name="foo" />;
+    <Counter />
+  </div>
+);
+
 const container = document.getElementById("root");
 Didact.render(element, container);
 
