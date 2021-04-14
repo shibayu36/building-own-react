@@ -297,18 +297,11 @@ function useState<T>(initial: T): [T, (cb: SetState<T>) => void] {
 }
 
 function createDom(fiber: DidactElement): Text | HTMLElement {
-  if (fiber.type === "TEXT_ELEMENT") {
-    return document.createTextNode(fiber.props?.nodeValue ?? "");
-  } else {
-    const dom = document.createElement(fiber.type);
-    if (fiber.props !== null) {
-      for (const [key, value] of Object.entries(fiber.props)) {
-        if (!isProperty(key)) continue;
-        dom.setAttribute(key, value);
-      }
-    }
-    return dom;
-  }
+  const dom = fiber.type == "TEXT_ELEMENT" ? document.createTextNode("") : document.createElement(fiber.type);
+
+  updateDom(dom, { children: [] }, fiber.props ?? { children: [] });
+
+  return dom;
 }
 
 function updateDom(dom: HTMLElement | Text, prevProps: DidactProps, nextProps: DidactProps): void {
