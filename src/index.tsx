@@ -2,6 +2,7 @@
 const Didact = {
   createElement,
   render,
+  useState,
 };
 
 const defaultProps: DidactProps = { children: [] };
@@ -20,12 +21,17 @@ type Fiber = {
   alternate?: Fiber;
 
   effectTag?: "UPDATE" | "PLACEMENT" | "DELETION";
+
+  hooks?: any[];
 };
 let wipRoot: Fiber | undefined = undefined;
 // 最後のファイバーツリーの参照。これと比較し差分処理する
 let currentRoot: Fiber | undefined = undefined;
 let nextUnitOfWork: Fiber | undefined = undefined;
 let deletions: Fiber[] = [];
+
+let wipFiber: Fiber | undefined = undefined;
+let hookIndex = 0;
 
 // ここ独自実装に差し替えられるの面白い
 /** @jsx Didact.createElement */
@@ -40,7 +46,7 @@ function Counter() {
 
 const element = (
   <div>
-    <App name="foo" />;
+    <App name="foo" />
     <Counter />
   </div>
 );
@@ -87,6 +93,10 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
 }
 
 function updateFunctionComponent(fiber: Fiber): void {
+  wipFiber = fiber;
+  hookIndex = 0;
+  wipFiber.hooks = [];
+
   // 関数コンポーネントは関数を呼び出した結果がchildren
   const children = [fiber.type(fiber.props)];
   reconcileChildren(fiber, children);
@@ -248,6 +258,42 @@ function render(element: DidactElement, container: HTMLElement | null): void {
   };
   nextUnitOfWork = wipRoot;
   deletions = [];
+}
+
+type Hook<T> = {
+  state: T;
+  queue: SetState<T>[];
+};
+type SetState<T> = (prev: T) => T;
+function useState<T>(initial: T): [T, (cb: SetState<T>) => void] {
+  const oldHook: Hook<T> = wipFiber?.alternate?.hooks?.[hookIndex];
+  const hook: Hook<T> = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [],
+  };
+
+  const actions = oldHook ? oldHook.queue : [];
+  actions.forEach((action) => {
+    hook.state = action(hook.state);
+  });
+
+  const setState = (action: SetState<T>) => {
+    hook.queue.push(action);
+    wipRoot = {
+      type: "ROOT_ELEMENT",
+      key: null,
+      dom: currentRoot?.dom,
+      props: currentRoot?.props ?? null,
+      alternate: currentRoot,
+    };
+    nextUnitOfWork = wipRoot;
+    deletions = [];
+  };
+
+  wipFiber?.hooks?.push(hook);
+  hookIndex++;
+
+  return [hook.state, setState];
 }
 
 function createDom(fiber: DidactElement): Text | HTMLElement {
